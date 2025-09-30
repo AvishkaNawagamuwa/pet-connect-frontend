@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import authService from "../services/authService";
+import Swal from 'sweetalert2';
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -8,28 +10,88 @@ export default function SignUp() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    if (!fullName || !email || !password) {
-      alert("All fields are required.");
+    // Very simple validation
+    if (!fullName.trim()) {
+      alert("Please enter your name");
+      setLoading(false);
       return;
     }
 
-    if (!email.includes("@")) {
-      alert("Invalid email. Must contain '@'.");
+    if (!email.trim() || !email.includes("@")) {
+      alert("Please enter a valid email address");
+      setLoading(false);
       return;
     }
 
-    if (password.length < 8) {
-      alert("Password must be at least 8 characters.");
+    if (!password.trim() || password.length < 3) {
+      alert("Password must be at least 3 characters");
+      setLoading(false);
       return;
     }
 
-    // If valid, navigate to login
-    alert("Account created successfully!");
-    navigate("/login");
+    try {
+      // Simple registration data
+      const userData = {
+        name: fullName.trim(),
+        email: email.trim().toLowerCase(),
+        password: password,
+        role: 'owner'
+      };
+
+      const result = await authService.register(userData);
+
+      if (result && result.success) {
+        await Swal.fire({
+          icon: 'success',
+          title: '🎉 Welcome to PetConnect!',
+          text: `Hello ${result.user?.name || fullName}! Your account has been created successfully!`,
+          timer: 2000,
+          showConfirmButton: false,
+          background: '#f5e6d3',
+          color: '#8b4513'
+        });
+        navigate("/home");
+      } else {
+        // Handle different error cases with better messages
+        const errorMsg = result?.error || "Registration failed";
+
+        if (errorMsg.includes("already exists") || errorMsg.includes("already registered") || errorMsg.includes("duplicate")) {
+          const result = await Swal.fire({
+            icon: 'info',
+            title: 'Email Already Registered',
+            text: 'This email is already registered. Would you like to login instead?',
+            showCancelButton: true,
+            confirmButtonText: 'Go to Login',
+            cancelButtonText: 'Try Different Email',
+            confirmButtonColor: '#d5a67e',
+            cancelButtonColor: '#6c757d'
+          });
+
+          if (result.isConfirmed) {
+            navigate("/login");
+          }
+        } else {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Registration Failed',
+            text: errorMsg,
+            footer: '<b>💡 Tip:</b> Try using a different email address',
+            confirmButtonColor: '#d5a67e'
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      alert("🔧 Connection issue. Please check your internet and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -81,6 +143,9 @@ export default function SignUp() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full p-3 rounded-xl border border-gray-300 bg-white/70 focus:outline-none focus:ring-2 focus:ring-[#8c6239] transition-all"
               />
+              <p className="text-xs text-black/60 mt-1">
+                💡 If email is already registered, you'll be asked to login instead
+              </p>
             </div>
 
             <div>
@@ -98,9 +163,10 @@ export default function SignUp() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-[#4d2e1d] text-white rounded-xl font-semibold hover:bg-[#3b2417] transition-all"
+              disabled={loading}
+              className="w-full py-3 bg-[#4d2e1d] text-white rounded-xl font-semibold hover:bg-[#3b2417] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign Up
+              {loading ? "Creating Account..." : "Sign Up"}
             </button>
 
             <div className="text-center text-sm text-black/80">

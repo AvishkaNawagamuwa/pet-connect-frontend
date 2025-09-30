@@ -1,26 +1,67 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import authService from "../services/authService";
+import Swal from 'sweetalert2';
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    if (!email.includes("@")) {
-      alert("Invalid email. Must contain '@'.");
+    // Very simple validation
+    if (!email.trim() || !email.includes("@")) {
+      alert("Please enter a valid email address");
+      setLoading(false);
       return;
     }
 
-    if (password.length < 8) {
-      alert("Password must be at least 8 characters.");
+    if (!password.trim()) {
+      alert("Please enter your password");
+      setLoading(false);
       return;
     }
 
-    // Redirect if valid
-    navigate("/home");
+    try {
+      const credentials = {
+        email: email.trim().toLowerCase(),
+        password: password
+      };
+
+      const result = await authService.login(credentials);
+
+      if (result && result.success) {
+        await Swal.fire({
+          icon: 'success',
+          title: '🎉 Welcome Back!',
+          text: `Hello ${result.user?.name || 'User'}! Login successful!`,
+          timer: 2000,
+          showConfirmButton: false,
+          background: '#f5e6d3',
+          color: '#8b4513'
+        });
+        navigate("/home");
+      } else {
+        const errorMsg = result?.error || "Login failed";
+        await Swal.fire({
+          icon: 'error',
+          title: 'Login Failed',
+          text: errorMsg.includes("Invalid credentials") || errorMsg.includes("not found")
+            ? "Email or password is incorrect. Please try again or sign up!"
+            : errorMsg,
+          confirmButtonColor: '#d5a67e'
+        });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      alert("🔧 Connection issue. Please check your internet and try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,7 +76,7 @@ export default function Login() {
 
       {/* Content */}
       <div className="relative w-full max-w-5xl bg-[#d5a67e]/80 backdrop-blur-lg shadow-2xl rounded-3xl border border-black overflow-hidden grid grid-cols-1 md:grid-cols-2 transition-all duration-300">
-        
+
         {/* Left Form Section */}
         <div className="p-10 flex flex-col justify-center">
           <div className="text-center mb-8">
@@ -81,9 +122,10 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-[#4d2e1d] text-white rounded-xl font-semibold hover:bg-[#3b2417] transition-all"
+              disabled={loading}
+              className="w-full py-3 bg-[#4d2e1d] text-white rounded-xl font-semibold hover:bg-[#3b2417] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Login
+              {loading ? "Logging in..." : "Login"}
             </button>
 
             <div className="text-center text-sm text-black/80">

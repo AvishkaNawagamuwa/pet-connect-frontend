@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AI Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .test-message {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .test-response {
+            background: #e8f5e8;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .error {
+            background: #ffe8e8;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="test-container">
+        <h1>🤖 AI Pet Chat Test</h1>
+        <button onclick="testAIChat()">Test AI Responses</button>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const testMessages = [
+            "My cat isn't eating well",
+            "My dog is vomiting",
+            "How do I train my puppy?",
+            "My pet has diarrhea",
+            "My dog is scratching a lot",
+            "What should I feed my senior cat?",
+            "My pet is having trouble breathing",
+            "How much exercise does my dog need?",
+            "My kitten won't use the litter box"
+        ];
+
+        async function testAIChat() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Testing AI responses...</p>';
+
+            for (let i = 0; i < testMessages.length; i++) {
+                const message = testMessages[i];
+
+                try {
+                    const response = await fetch('http://localhost:5001/api/chat/demo', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
+
+                    const data = await response.json();
+
+                    resultsDiv.innerHTML += `
+                        <div class="test-message">
+                            <strong>Question ${i + 1}:</strong> ${message}
+                        </div>
+                        <div class="test-response ${response.ok ? '' : 'error'}">
+                            <strong>AI Response:</strong> ${response.ok ? data.response : data.message}
+                            ${response.ok ? `<br><small>Powered by: ${data.powered_by}</small>` : ''}
+                        </div>
+                    `;
+                } catch (error) {
+                    resultsDiv.innerHTML += `
+                        <div class="test-message">
+                            <strong>Question ${i + 1}:</strong> ${message}
+                        </div>
+                        <div class="test-response error">
+                            <strong>Error:</strong> ${error.message}
+                        </div>
+                    `;
+                }
+
+                // Add small delay
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
+    </script>
+</body>
+
+</html>
